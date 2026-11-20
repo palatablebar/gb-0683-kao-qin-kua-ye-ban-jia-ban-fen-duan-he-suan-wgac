@@ -12,7 +12,8 @@
 | M4 缺卡复核 | 查看并复算缺卡复核 | `/api/m4_segments` | `app/modules/m4_segments/rules.py` | `tests/test_segments.py` |
 | M5 工时切段 | 查看并复算工时切段 | `/api/m5_calculate` | `app/modules/m5_calculate/rules.py` | `tests/test_calculate.py` |
 | M6 薪资对账 | 查看并复算薪资对账 | `/api/m6_reconcile` | `app/modules/m6_reconcile/compare.py` | `tests/test_reconcile.py` |
-| M7 周期归档 | 查看并复算周期归档 | `/api/m7_archive` | `app/modules/m7_archive/export_out.py` | `tests/test_archive.py` |
+| M7 可付裁决 | 查看并复算可付裁决 | `/api/m7_settle` | `app/modules/m7_settle/rules.py` | `tests/test_settle.py` |
+| M8 周期归档 | 查看并复算周期归档 | `/api/m8_archive` | `app/modules/m8_archive/export_out.py` | `tests/test_archive.py` |
 
 ## 陷阱登记
 
@@ -31,6 +32,12 @@
 | TRAP-26 | 旧版本复核 | 覆盖新结论 | 事务条件更新 | `app/store.py` | `tests/test_archive.py::test_stale_review` |
 | TRAP-23 | 休息与跨夜端点 | 重复或漏计 | 半开区间切片 | `app/modules/m4_segments/rules.py` | `tests/test_segments.py::test_break_removed` |
 | TRAP-19 | 假日与周末重叠 | 费率相加 | 假日优先 | `app/modules/m5_calculate/rules.py` | `tests/test_calculate.py::test_holiday_overrides_rest` |
+| TRAP-31 | 未批替班进工资 | 按打卡人直付 | 无有效审批挂起 | `app/modules/m7_settle/rules.py` | `tests/test_settle.py::test_unapproved_substitution_held_not_paid` |
+| TRAP-32 | 顶班者拿不到工资 | 按排班人支付 | 已批付给打卡人 | `app/modules/m7_settle/rules.py` | `tests/test_settle.py::test_approved_before_cutoff_pays_actual` |
+| TRAP-33 | 截止后补审批 | 追溯改旧账 | 截止判定加新批次失效 | `app/modules/m7_settle/rules.py` | `tests/test_settle.py::test_approved_after_cutoff_still_held` |
+| TRAP-34 | 两人同顶一班 | 重复付同一分钟 | 重复顶班整组挂起 | `app/modules/m7_settle/rules.py` | `tests/test_settle.py::test_double_coverage_same_shift_held` |
+| TRAP-35 | 旧结果再导出 | 新旧两版并行 | 仅当前批次可导出 | `app/main.py` | `tests/test_e2e.py::test_superseded_run_export_rejected` |
+| TRAP-36 | 替换冲掉原件 | 失败覆盖旧版 | 入库前抛错保留旧版 | `app/workflow.py` | `tests/test_settle.py::test_failed_replacement_keeps_old_run_and_records` |
 
 ## 对账规则
 

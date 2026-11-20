@@ -30,3 +30,29 @@ def test_reselect_existing_run_updates_visible_batch(client):
 
 def test_invalid_csv_type_rejected(client):
     assert client.post('/api/runs',json={'csv':123}).status_code==422
+
+def test_superseded_run_export_rejected(client):
+    a=client.post('/api/runs',json={'sample':'dirty.csv'}).get_json()
+    b=client.post('/api/runs',json={'sample':'clean.csv'}).get_json()
+    old=client.get('/api/archive/'+a['run_id']+'/export.csv')
+    assert old.status_code==409 and old.get_json()['code']=='SUPERSEDED'
+    assert client.get('/api/archive/'+b['run_id']+'/export.csv').status_code==200
+
+def test_failed_replacement_keeps_current_export(client):
+    a=client.post('/api/runs',json={'sample':'dirty.csv'}).get_json()
+    assert client.post('/api/runs',json={'csv':'wrong\n1\n'}).status_code==422
+    assert client.get('/api/archive/'+a['run_id']+'/export.csv').status_code==200
+
+def test_substitution_flow_via_api(client):
+    p={'roster':[{'employee':'E201','shift_day':'2026-10-01','shift_start':'22:00','shift_end':'06:00'},
+        {'employee':'E203','shift_day':'2026-10-01','shift_start':'22:00','shift_end':'06:00'}],
+        'cutoff':'2026-10-31T23:59:59+08:00',
+        'substitutions':[{'id':'SUB-1','shift_day':'2026-10-01','scheduled':'E201','actual':'E202','status':'待批'}]}
+    held=client.post('/api/runs',json={'sample':'substitute.csv','parameters':p}).get_json()
+    assert next(r for r in held['settle']['payables'] if r['actual']=='E202')['status']=='挂起'
+    p['substitutions'][0].update(status='已批准',approved_at='2026-10-30T09:00:00+08:00')
+    approved=client.post('/api/runs',json={'sample':'substitute.csv','parameters':p}).get_json()
+    assert next(r for r in approved['settle']['payables'] if r['actual']=='E202')['payee']=='E202'
+    assert client.get('/api/archive/'+held['run_id']+'/export.csv').status_code==409
+    exported=client.get('/api/archive/'+approved['run_id']+'/export.csv')
+    assert exported.status_code==200 and '可付' in exported.data.decode('utf-8-sig')

@@ -21,9 +21,14 @@ def get(run_id):
     if not r:raise DomainError('NOT_FOUND','批次不存在',404)
     body=json.loads(r['body']);body.update(run_id=r['id'],review_version=r['version'],decision=r['decision']);return body
 
+def latest_id():
+    with connection() as db:r=db.execute("SELECT value FROM meta WHERE key='latest'").fetchone()
+    return r['value'] if r else None
+
 def history():
     with connection() as db:rows=db.execute("SELECT id,version,decision FROM runs ORDER BY CASE WHEN id=(SELECT value FROM meta WHERE key='latest') THEN 0 ELSE 1 END,rowid DESC LIMIT 100").fetchall()
-    return [dict(r) for r in rows]
+    latest=latest_id()
+    return [dict(r,current=r['id']==latest) for r in rows]
 
 def review(run_id, version, decision):
     if decision not in ('通过','退回'):raise DomainError('DECISION','复核状态无效')

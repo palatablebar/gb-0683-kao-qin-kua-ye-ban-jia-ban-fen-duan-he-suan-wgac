@@ -6,9 +6,14 @@ def bundle(state):
     rid=state.get('run_id','preview')
     writer.writerow(['运行清单',rid,'','','',json.dumps(state.get('manifest',{}),ensure_ascii=False,sort_keys=True)])
     writer.writerow(['对账',rid,'','','',json.dumps(state.get('reconcile',{}),ensure_ascii=False,sort_keys=True)])
+    settle=state.get('settle',{})
+    if settle:
+        summary={k:settle.get(k) for k in ('totals','by_employee','approvals','issues','cutoff','balanced')}
+        writer.writerow(['裁决',rid,'','','',json.dumps(summary,ensure_ascii=False,sort_keys=True)])
+    for row in settle.get('payables',[]):writer.writerow(['可付',rid,'',row.get('shift',''),row.get('status',''),json.dumps(row,ensure_ascii=False,sort_keys=True)])
     for row in state.get('calculations',[]):writer.writerow(['计算',rid,row.get('line',''),row.get('id',''),row.get('code',''),json.dumps(row,ensure_ascii=False,sort_keys=True)])
     for row in state['quarantine']:writer.writerow(['隔离',rid,row['line'],row.get('id',''),row['code'],json.dumps(row.get('raw',{}),ensure_ascii=False,sort_keys=True)])
-    return '\ufeff'+out.getvalue()
+    return '﻿'+out.getvalue()
 
 def checksum(state):
     return hashlib.sha256(bundle(state).encode('utf-8')).hexdigest()
